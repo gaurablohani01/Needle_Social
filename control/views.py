@@ -15,31 +15,31 @@ def index(request):
     all_posts = Post.objects.all().order_by('-date_created')
     paginator = Paginator(all_posts, 10)
     page_number = request.GET.get('page')
-    if page_number == None:
+    if page_number is None:
         page_number = 1
     posts = paginator.get_page(page_number)
     followings = []
     suggestions = []
+
     if request.user.is_authenticated:
         followings = Follower.objects.filter(followers=request.user).values_list('user', flat=True)
         suggestions = User.objects.exclude(pk__in=followings).exclude(username=request.user.username).order_by("?")[:6]
+
     return render(request, "index.html", {
         "posts": posts,
         "suggestions": suggestions,
         "page": "all_posts",
-        'profile': False
+        'profile': False,
+
     })
 
 
 def login_view(request):
     if request.method == "POST":
-
-        # Attempt to sign user in
-        username = request.POST["username"]
+        username = request.POST["username"].lower()
         password = request.POST["password"]
         user = authenticate(request, username=username, password=password)
 
-        # Check if authentication successful
         if user is not None:
             login(request, user)
             return HttpResponseRedirect(reverse("index"))
@@ -58,10 +58,10 @@ def logout_view(request):
 
 def register(request):
     if request.method == "POST":
-        username = request.POST["username"]
-        email = request.POST["email"]
-        fname = request.POST["firstname"]
-        lname = request.POST["lastname"]
+        username = request.POST.get("username", "").lower()
+        email = request.POST.get("email", "").lower()
+        fname = request.POST.get("firstname", "").strip().capitalize()
+        lname = request.POST.get("lastname", "").strip().capitalize()
         profile = request.FILES.get("profile")
         cover = request.FILES.get('cover')
         # Ensure password matches confirmation
@@ -80,8 +80,8 @@ def register(request):
             if profile is not None:
                 user.profile_pic = profile
             else:
-                user.profile_pic = "/default.png"
-            user.cover = cover           
+                user.profile_pic = "default.png"
+            user.cover = cover
             user.save()
             Follower.objects.create(user=user)
         except IntegrityError:
@@ -97,26 +97,26 @@ def register(request):
 def edit_profile(request):
     if request.method == 'POST':
         user = request.user
- 
+
         user.first_name = request.POST.get('firstname', user.first_name)
         user.last_name = request.POST.get('lastname', user.last_name)
         user.email = request.POST.get('email', user.email)
         user.bio=request.POST.get('bio',user.bio)
-        
+
         if 'profile' in request.FILES:
             user.profile_pic = request.FILES['profile']
-        
-      
+
+
         if 'cover' in request.FILES:
             user.cover = request.FILES['cover']
-        
+
         if 'remove_profile' in request.POST:
             user.profile_pic = "profile_pic/no_pic.png"
-        
-        
+
+
         if 'remove_cover' in request.POST:
             user.cover = None
-        
+
         try:
             user.save()
             return HttpResponseRedirect(reverse('profile', kwargs={'username': user.username}))
@@ -125,7 +125,7 @@ def edit_profile(request):
                 "message": "Username already taken.",
                 "user": user
             })
-    
+
     return render(request, 'edit_profile.html', {
         "user": request.user
     })
@@ -147,9 +147,13 @@ def profile(request, username):
 
         if request.user in Follower.objects.get(user=user).followers.all():
             follower = True
-    
-    follower_count = Follower.objects.get(user=user).followers.all().count()
-    following_count = Follower.objects.filter(followers=user).count()
+
+    follower_count = Follower.objects.get(user=request.user).followers.all().count()
+    following_count = Follower.objects.filter(followers=request.user).count()
+
+
+
+
     return render(request, 'profile.html', {
         "username": user,
         "posts": posts,
@@ -158,8 +162,21 @@ def profile(request, username):
         "page": "profile",
         "is_follower": follower,
         "follower_count": follower_count,
-        "following_count": following_count
+        "following_count": following_count,
     })
+
+def all_suggestions(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    followings = Follower.objects.filter(followers=request.user).values_list('user', flat=True)
+    all_suggestions = User.objects.exclude(pk__in=followings).exclude(username=request.user.username).order_by("?")
+
+    paginator = Paginator(all_suggestions,15)
+    page_number = request.GET.get('page')
+    suggestions_page = paginator.get_page(page_number)
+
+    return render(request, 'all_suggestions.html', {'suggestions': suggestions_page})
 
 def following(request):
     if request.user.is_authenticated:
@@ -199,7 +216,7 @@ def saved(request):
         })
     else:
         return HttpResponseRedirect(reverse('login'))
-        
+
 
 
 @login_required
@@ -229,7 +246,7 @@ def edit_post(request, post_id):
             if img_chg != 'false':
                 post.content_image = pic
             post.save()
-            
+
             if(post.content_text):
                 post_text = post.content_text
             else:
@@ -238,14 +255,14 @@ def edit_post(request, post_id):
                 post_image = post.img_url()
             else:
                 post_image = False
-            
+
             return JsonResponse({
                 "success": True,
                 "text": post_text,
                 "picture": post_image
             })
         except Exception as e:
-         
+
             return JsonResponse({
                 "success": False
             })
@@ -365,7 +382,7 @@ def comment(request, post_id):
                 return JsonResponse([newcomment.serialize()], safe=False, status=201)
             except Exception as e:
                 return HttpResponse(e)
-    
+
         post = Post.objects.get(id=post_id)
         comments = Comment.objects.filter(post=post)
         comments = comments.order_by('-comment_time').all()
