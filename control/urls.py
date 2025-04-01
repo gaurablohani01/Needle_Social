@@ -7,6 +7,7 @@ urlpatterns = [
     path("auth/logout", views.logout_view, name="logout"),
     path("auth/register", views.register, name="register"),
     path('edit_profile/', views.edit_profile, name='edit_profile'),
+    path('suggestions/', views.all_suggestions, name='all_suggestions'),
     path("<str:username>/", views.profile, name='profile'),
     path("n/following", views.following, name='following'),
     path("n/saved", views.saved, name="saved"),
@@ -20,6 +21,7 @@ urlpatterns = [
     path("n/post/<int:post_id>/delete", views.delete_post, name="deletepost"),
     path("<str:username>/follow", views.follow, name="followuser"),
     path("<str:username>/unfollow", views.unfollow, name="unfollowuser"),
-    path("n/post/<int:post_id>/edit", views.edit_post, name="editpost")
+    path("n/post/<int:post_id>/edit", views.edit_post, name="editpost"),
+
 ]
 
