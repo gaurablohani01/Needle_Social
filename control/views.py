@@ -148,11 +148,8 @@ def profile(request, username):
         if request.user in Follower.objects.get(user=user).followers.all():
             follower = True
 
-    follower_count = Follower.objects.get(user=request.user).followers.all().count()
-    following_count = Follower.objects.filter(followers=request.user).count()
-
-
-
+    follower_count = Follower.objects.get(user=user).followers.all().count()
+    following_count = Follower.objects.filter(followers=user).count()
 
     return render(request, 'profile.html', {
         "username": user,
